@@ -1,0 +1,15 @@
+### Signup User
+POST  http://localhost:3000/api/signup
+Content-Type: application/json
+
+{
+    "userID": "670e35be5188a39afc116b6f",
+    "lastName": "m",
+    "email": "vaishnnav0@gmail.com",
+    "phone": "Hello@123",
+    "password": "Hello@123"
+}
+
+###
+GET http://localhost:3000/api/admin/getProducts
+Content-Type: application/json
