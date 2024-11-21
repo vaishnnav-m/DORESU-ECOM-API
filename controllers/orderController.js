@@ -134,8 +134,56 @@ const verifyPayment = async (req,res) => {
 
 const getOrderhistories = async (req,res) => {
    try {
-      const filter = req.user.isAdmin ? {} :{userId:req.user.id};
-      const orderhistories = await Order.find(filter).populate("items.productId");
+      const { filter, startDate, endDate } = req.query;
+      const filterCondition = req.user.isAdmin ? {} : { userId: req.user.id };
+
+      let dateFilter = {};
+
+      if (filter === "today") {
+         const today = new Date();
+         const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+         const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+         dateFilter = {
+           createdAt: {
+             $gte: startOfDay,
+             $lte: endOfDay,
+           },
+         };
+       } else if (filter === "week") {
+         const today = new Date();
+         const firstDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay())); // Set to Sunday
+         const lastDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 6)); // Set to Saturday
+         dateFilter = {
+           createdAt: {
+             $gte: firstDayOfWeek,
+             $lte: lastDayOfWeek,
+           },
+         };
+       } else if (filter === "month") {
+         const today = new Date();
+         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1); // First day of the month
+         const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Last day of the month
+         dateFilter = {
+           createdAt: {
+             $gte: startOfMonth,
+             $lte: endOfMonth,
+           },
+         };
+       } else if (startDate && endDate) {
+         // Custom date filter if "startDate" and "endDate" are provided
+         dateFilter = {
+           createdAt: {
+             $gte: new Date(startDate),
+             $lte: new Date(endDate),
+           },
+         };
+       }
+
+       const filterQuery = { ...filterCondition, ...dateFilter };
+
+       console.log(filterQuery);
+
+      const orderhistories = await Order.find(filterQuery).populate("items.productId");
       if(!orderhistories)
          return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus,"Order histories not found"));
 
