@@ -8,6 +8,9 @@ const addressController = require('../controllers/addressController');
 const cartController = require('../controllers/cartController');
 const orderController = require('../controllers/orderController');
 const wishListController = require('../controllers/wishListController');
+const couponController = require('../controllers/couponController');
+const categoryController = require('../controllers/categorieController');
+const walletController = require('../controllers/walletController');
 
 user_route.post('/signup',userController.postSignup);
 
@@ -32,6 +35,8 @@ user_route.post('/logout',verifyToken,userController.logoutUser);
 user_route.get('/getProducts',productController.getProducts);
 
 user_route.get('/getProduct/:productId',productController.getProduct);
+
+user_route.get('/getCategories',verifyToken,categoryController.getCategories)
 
 user_route.post('/addAddress',verifyToken,addressController.addAddress);
 
@@ -61,10 +66,14 @@ user_route.get('/getUserOrderHistories',verifyToken,orderController.getOrderhist
 
 user_route.get('/getOneOrder/:orderId',verifyToken,orderController.getOneOrder);
 
-user_route.patch('/cancelOrder',verifyToken,orderController.updateOrderStatus);
+user_route.patch('/order/updateStatus',verifyToken,orderController.updateOrderStatus);
 
 user_route.post('/wishList/add',verifyToken,wishListController.addWishList);
 
 user_route.get('/wishList/get',verifyToken,wishListController.getWishList);
+
+user_route.post('/applyCoupon',verifyToken,couponController.applyCoupon);
+
+user_route.get('/getWallet',verifyToken,walletController.getUserWallet);
 
 module.exports = user_route;

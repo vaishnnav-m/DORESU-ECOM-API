@@ -1,6 +1,8 @@
 const Order = require('../models/orderSchema');
 const Cart = require('../models/cartSchema');
 const Product = require('../models/productsSchema');
+const Coupon = require('../models/couponSchema')
+const Wallet = require('../models/walletSchema')
 const {HttpStatus,createResponse} = require("../utils/generateResponse");
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
@@ -8,7 +10,7 @@ const crypto = require('crypto');
 const placeOrder = async (req,res) => {
    try {
       const userId = req.user.id;
-      const { address, items, totalPrice, totalQuantity, paymentMethod } = req.body;
+      const { address, items, totalPrice, totalQuantity, paymentMethod, couponDiscount, couponCode } = req.body;
 
       let razorpayOrderId = null;    
       if(paymentMethod === 'online'){
@@ -30,7 +32,6 @@ const placeOrder = async (req,res) => {
          razorpayOrderId = order.id;
       }
 
-   
       const newOrder = new Order({
          userId,
          items:items.map(item => ({
@@ -51,6 +52,7 @@ const placeOrder = async (req,res) => {
             street:address.street,
             state:address.state,
          },
+         couponDiscount:couponDiscount?couponDiscount:0,
          totalPrice,
          totalQuantity,
          paymentMethod:paymentMethod,
@@ -59,6 +61,9 @@ const placeOrder = async (req,res) => {
       });
    
       await newOrder.save();
+
+      if(couponCode)
+         await Coupon.findOneAndUpdate({ couponCode }, { $inc: { usedCount:1 } });
 
       if(paymentMethod === "online"){
          return res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"Order created successfully",{razorpayOrderId}))
@@ -163,16 +168,49 @@ const updateOrderStatus = async (req,res) => {
       const updatedOrder = await Order.findOneAndUpdate({_id:orderId,"items._id":itemId},{$set:{"items.$.status":status}},{new:true});
    
       if(!updatedOrder)
-         return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus,"Item in the order is not found"));
+         return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus.NOT_FOUND,"Item in the order is not found"));
 
-      if(status === "Cancelled"){
-         const cancelledItem = updatedOrder.items.find(item => item._id.toString() === itemId);
-         console.log(cancelledItem);
-         if(cancelledItem){
-            await Product.updateOne({_id:cancelledItem.productId,"variants.size":cancelledItem.size},
-               { $inc: { "variants.$.stock": cancelledItem.quantity } }
+      const affectedItem = updatedOrder.items.find(item => item._id.toString() === itemId);
+
+      if(status === "Cancelled" && affectedItem){
+            await Product.updateOne(
+               {_id:affectedItem.productId,"variants.size":affectedItem.size},
+               { $inc: { "variants.$.stock": affectedItem.quantity } }
             );
-         }
+      }
+
+      if(status === "Returned" && affectedItem){
+            await Product.updateOne(
+               {_id:affectedItem.productId,"variants.size":affectedItem.size},
+               { $inc: { "variants.$.stock": affectedItem.quantity } }
+            ); 
+
+            const {price,quantity} = affectedItem;
+            const totalOrderPrice = updatedOrder.totalPrice;
+            const totalCouponDiscount = updatedOrder.couponDiscount || 0;
+
+            const itemTotal = price * quantity;
+            const proportionalCouponDiscount = (itemTotal / totalOrderPrice) * totalCouponDiscount;
+
+            const refundAmount = itemTotal - proportionalCouponDiscount;
+            const userId = req.user.id;
+
+            let wallet = await Wallet.findOne({userId});
+            if(!wallet){
+               wallet = new Wallet({
+                  userId,
+                  balance:0,
+                  histories:[]
+               });
+            }
+
+            wallet.balance += refundAmount;
+            wallet.histories.push({
+               type:"Credit",
+               amount:refundAmount,
+            });
+
+            await wallet.save();
       }
 
       res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK, 'Order status updated successfully')); 

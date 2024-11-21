@@ -5,6 +5,7 @@ const categoryController = require('../controllers/categorieController')
 const productController = require('../controllers/productController');
 const orderController = require('../controllers/orderController');
 const offerController = require('../controllers/offerController');
+const couponController = require('../controllers/couponController');
 const verifyToken = require('../middlewares/tokenCheck');
 const upload = require('../middlewares/imageUpload');
 
@@ -45,5 +46,9 @@ admin_route.get('/getOffers',verifyToken,offerController.getOffers);
 admin_route.patch('/offers/updateStatus',verifyToken,offerController.editOfferStatus);
 
 admin_route.put('/updateOffer',verifyToken,offerController.editOffer);
+
+admin_route.post('/addCoupon',verifyToken,couponController.addCoupon);
+
+admin_route.get('/getCoupons',verifyToken,couponController.getCoupons);
 
 module.exports = admin_route;

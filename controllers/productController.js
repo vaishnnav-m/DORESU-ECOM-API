@@ -1,4 +1,5 @@
 const Product = require("../models/productsSchema");
+const Category = require('../models/catagorySchema');
 const {HttpStatus,createResponse} = require("../utils/generateResponse");
 
 // controller to handle products adding
@@ -43,7 +44,9 @@ const addProduct = async (req, res) => {
 
     // category filter
     if (category !== "All" && !req?.user?.isAdmin) {
-      filter.category = category;
+      const categoryData = await Category.findOne({categoryName:category}).select('_id');
+      if(categoryData)
+        filter.category = categoryData._id;
     }
     // price filter
     if (priceRange && priceRange !== "All" && !req?.user?.isAdmin) {
@@ -86,10 +89,10 @@ const addProduct = async (req, res) => {
       }
     }
 
-    // searching
-    if(query){ 
-      filter.productName = { $regex: query, $options: "i" };
-    }
+    // // searching
+    // if(query){ 
+    //   filter.productName = { $regex: query, $options: "i" };
+    // }
     const products = await Product.find(filter).populate('category','categoryName -_id',).populate('offer').skip(effectiveOffset).limit(effectiveLimit).sort(sortOptions);
     if(!products || products.length === 0)
       return res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"No products were found",[]));

@@ -27,12 +27,11 @@ const addCategory = async (req, res) => {
    }
  };
  
- const getCategories = async (req, res) => {
-   if (!req.user.isAdmin)
-     return res.status(403).json({ message: "You have no permission" });
- 
+ const getCategories = async (req, res) => { 
    try {
-     const categories = await Category.find();
+    const filter = req?.user?.isAdmin ? {} : { isActive: true };
+
+     const categories = await Category.find(filter);
  
      if (!categories) return res.status(404).json({ message: "No Categories" });
  

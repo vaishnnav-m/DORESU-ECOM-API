@@ -1,11 +1,16 @@
 const {HttpStatus,createResponse} = require("../utils/generateResponse");
 const WishList = require('../models/wishListSchema');
+const Product = require('../models/productsSchema')
 
 const addWishList = async (req,res) => {
   try {
     console.log("working");
     const {productId} = req.body;
     const userId = req.user.id;
+    
+    const productData = await Product.findById(productId);
+    if(!productData || !productData.isActive)
+      return res.status(HttpStatus.NOT_FOUND).json(HttpStatus.NOT_FOUND,"Product not found");
 
     let wishList = await WishList.findOne({userId});
     let action;

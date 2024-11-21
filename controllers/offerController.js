@@ -4,6 +4,8 @@ const Product = require('../models/productsSchema')
 
 const addOffer = async (req,res) => {
    const {offerName,offerType,targetId,offerValue,startDate,endDate} = req.body;
+   if(!req.user.isAdmin)
+      return res.status(HttpStatus.FORBIDDEN).json(createResponse(HttpStatus.FORBIDDEN,"You don't have the permission"));
    try {
       const isExistingOffer = await Offer.findOne({targetId});
       if(isExistingOffer)
@@ -33,8 +35,8 @@ const addOffer = async (req,res) => {
          const products = await Product.find({category:targetId}).populate('offer')
 
          for(const product of products){
-            if(!product.offer || offerValue > product?.offer?.offerValue){
-               await Product.findByIdAndUpdate(product._id,{$set:{offer:offer._id}})
+            if(!product?.offer || offerValue > product?.offer?.offerValue){
+               await Product.findByIdAndUpdate(product._id,{$set:{offer:offerData._id}})
             }
          }
       }
@@ -47,6 +49,8 @@ const addOffer = async (req,res) => {
 }
 
 const getOffers = async (req,res) => {
+   if(!req.user.isAdmin)
+      return res.status(HttpStatus.FORBIDDEN).json(createResponse(HttpStatus.FORBIDDEN,"You don't have the permission"));
    try {
       const offers = await Offer.find();
       
@@ -71,8 +75,23 @@ const editOfferStatus = async (req,res) => {
       const offerData = await Offer.findById(offerId);
       if(!offerData)
          return res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"No offer were found"));
-    
-      await Offer.findByIdAndUpdate(offerId,{isActive:!offerData.isActive})
+      
+      const newStatus = !offerData.isActive; 
+      await Offer.findByIdAndUpdate(offerId,{isActive:newStatus})
+
+      if(!newStatus){
+         if(offerData.offerType === "product"){
+            await Product.findOneAndUpdate(
+               {_id:offerData.targetId,offer:offerId},
+               {$unset:{offer:""}}
+            );
+         }else if(offerData.offerType === "category"){
+            await Product.updateMany(
+               {category:offerData.targetId,offer:offerId},
+               {$unset:{offer:""}}
+            );
+         }
+      }
 
       res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"successfully updated the offer"));
       

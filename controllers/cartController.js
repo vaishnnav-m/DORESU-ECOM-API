@@ -5,10 +5,9 @@ const {HttpStatus,createResponse} = require("../utils/generateResponse");
 
 const addCart = async (req,res) => {
    const {productId,size,quantity} = req.body;
-   console.log("Reached");
    try {
       const productData = await Product.findById(productId);
-      if(!productData)
+      if(!productData || !productData.isActive)
          return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus.NOT_FOUND, "Product not found"));
 
       const selectedVariant = productData.variants.find( vrnt => vrnt.size === size);
@@ -68,20 +67,30 @@ const getCart = async (req,res) => {
 
       console.log(cartData);
 
+      let totalPriceAfterDiscount = 0;
       const updatedProducts = cartData.products.map(item => {
+
+         const product = item.productId;
+         const originalPrice = item.price;
+         const offerValue = product?.offer?.offerValue || 0;
+
+         const priceAfterDiscount = Math.floor(originalPrice - (originalPrice * offerValue) / 100)
+         totalPriceAfterDiscount += priceAfterDiscount * item.quantity;
+
          const imageUrl = `${req.protocol}://${req.get('host')}/uploads/products/${item.productId.gallery[0]}`;
          return {
             ...item,
             productId: {
-              ...item.productId,
-              gallery: imageUrl, 
+              ...product,
+              gallery: imageUrl,
             },
-          }; 
+          };
       });
       
       cartData.products = updatedProducts;
 
-      res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"cart fetched succefully",cartData))
+
+      res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"cart fetched succefully",{...cartData,totalPriceAfterDiscount}));
    } catch (error) {
       console.log(error);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(createResponse(HttpStatus.INTERNAL_SERVER_ERROR,"Internal Server Error"));
