@@ -89,10 +89,10 @@ const addProduct = async (req, res) => {
       }
     }
 
-    // // searching
-    // if(query){ 
-    //   filter.productName = { $regex: query, $options: "i" };
-    // }
+    // searching
+    if(query){ 
+      filter.productName = { $regex: query, $options: "i" };
+    }
     const products = await Product.find(filter).populate('category','categoryName -_id',).populate('offer').skip(effectiveOffset).limit(effectiveLimit).sort(sortOptions);
     if(!products || products.length === 0)
       return res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"No products were found",[]));

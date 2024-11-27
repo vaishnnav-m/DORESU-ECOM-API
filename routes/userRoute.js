@@ -72,6 +72,8 @@ user_route.post('/wishList/add',verifyToken,wishListController.addWishList);
 
 user_route.get('/wishList/get',verifyToken,wishListController.getWishList);
 
+user_route.get('/getCoupons',verifyToken,couponController.getCoupons);
+
 user_route.post('/applyCoupon',verifyToken,couponController.applyCoupon);
 
 user_route.get('/getWallet',verifyToken,walletController.getUserWallet);

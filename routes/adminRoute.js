@@ -51,4 +51,11 @@ admin_route.post('/addCoupon',verifyToken,couponController.addCoupon);
 
 admin_route.get('/getCoupons',verifyToken,couponController.getCoupons);
 
+admin_route.put('/editCoupon',verifyToken,couponController.editCoupons);
+
+admin_route.get('/salesReportPdf',verifyToken,orderController.downloadPDFReport);
+
+admin_route.get('/salesReportExcel',verifyToken,orderController.downloadXLReport);
+
+
 module.exports = admin_route;

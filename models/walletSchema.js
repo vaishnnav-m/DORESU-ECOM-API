@@ -26,8 +26,13 @@ const walletSchema = mongoose.Schema(
           type: Date,
           default: Date.now,
         },
+        remark:{
+          type:String,
+          required:true
+        }
       },
     ],
+    
   },
   { timestamps: true }
 );

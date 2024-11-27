@@ -6,7 +6,88 @@ const Wallet = require('../models/walletSchema')
 const {HttpStatus,createResponse} = require("../utils/generateResponse");
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const ExcelJS = require("exceljs");
+const { jsPDF } = require("jspdf");
+require("jspdf-autotable") 
 
+// ------------------ Helper Functions ------------------ //
+// function to refund 
+const refund = async (affectedItem,userId,updatedOrder,remark) => {
+   const {price,quantity} = affectedItem;
+   const totalOrderPrice = updatedOrder.totalPrice;
+   const totalCouponDiscount = updatedOrder.couponDiscount || 0;
+   
+   const itemTotal = price * quantity;
+   const proportionalCouponDiscount = (itemTotal / totalOrderPrice) * totalCouponDiscount;
+
+   const refundAmount = itemTotal - proportionalCouponDiscount;
+
+   let wallet = await Wallet.findOne({userId});
+   if(!wallet){
+      wallet = new Wallet({
+         userId,
+         balance:0,
+         histories:[]
+      });
+   }
+
+   console.log(refundAmount);
+
+   wallet.balance += refundAmount;
+   wallet.histories.push({
+      type:"Credit",
+      amount:refundAmount,
+      remark
+   });
+
+   await wallet.save();
+}
+
+// function to get date filter
+const getDateFilter = (filter, startDate, endDate) => {
+      if (filter === "today") {
+         const today = new Date();
+         const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+         const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+         return {
+           createdAt: {
+             $gte: startOfDay,
+             $lte: endOfDay,
+           },
+         };
+       } else if (filter === "week") {
+         const today = new Date();
+         const firstDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
+         const lastDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 6)); 
+         return {
+           createdAt: {
+             $gte: firstDayOfWeek,
+             $lte: lastDayOfWeek,
+           },
+         };
+       } else if (filter === "month") {
+         const today = new Date();
+         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1); 
+         const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+         return {
+           createdAt: {
+             $gte: startOfMonth,
+             $lte: endOfMonth,
+           },
+         };
+       } else if (startDate && endDate) {
+         // Custom date filter if "startDate" and "endDate" are provided
+         return {
+           createdAt: {
+             $gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+             $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
+           },
+         };
+       }
+}
+
+// ------------------ Controller Functions ------------------ //
+// place order logic
 const placeOrder = async (req,res) => {
    try {
       const userId = req.user.id;
@@ -87,6 +168,7 @@ const placeOrder = async (req,res) => {
    }
 }
 
+// verify payment logic
 const verifyPayment = async (req,res) => {
    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
    console.log("verify payment",razorpay_order_id);
@@ -132,58 +214,24 @@ const verifyPayment = async (req,res) => {
    }
 }
 
+// get all orders
 const getOrderhistories = async (req,res) => {
    try {
-      const { filter, startDate, endDate } = req.query;
+      const { filter, startDate, endDate, limit = 10, page = 1 } = req.query;
       const filterCondition = req.user.isAdmin ? {} : { userId: req.user.id };
+      const maxLimit = 20;
 
-      let dateFilter = {};
+      const effectiveLimit = Math.min(limit,maxLimit);
+      const skip = (page-1)*effectiveLimit;
+      const totalOrders = await Order.countDocuments();
+      const totalPages = Math.ceil(totalOrders / limit);
 
-      if (filter === "today") {
-         const today = new Date();
-         const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-         const endOfDay = new Date(today.setHours(23, 59, 59, 999));
-         dateFilter = {
-           createdAt: {
-             $gte: startOfDay,
-             $lte: endOfDay,
-           },
-         };
-       } else if (filter === "week") {
-         const today = new Date();
-         const firstDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay())); // Set to Sunday
-         const lastDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 6)); // Set to Saturday
-         dateFilter = {
-           createdAt: {
-             $gte: firstDayOfWeek,
-             $lte: lastDayOfWeek,
-           },
-         };
-       } else if (filter === "month") {
-         const today = new Date();
-         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1); // First day of the month
-         const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Last day of the month
-         dateFilter = {
-           createdAt: {
-             $gte: startOfMonth,
-             $lte: endOfMonth,
-           },
-         };
-       } else if (startDate && endDate) {
-         // Custom date filter if "startDate" and "endDate" are provided
-         dateFilter = {
-           createdAt: {
-             $gte: new Date(startDate),
-             $lte: new Date(endDate),
-           },
-         };
-       }
+
+      const dateFilter = getDateFilter(filter, startDate, endDate);
 
        const filterQuery = { ...filterCondition, ...dateFilter };
 
-       console.log(filterQuery);
-
-      const orderhistories = await Order.find(filterQuery).populate("items.productId");
+      const orderhistories = await Order.find(filterQuery).populate("items.productId").sort({createdAt:-1}).skip(skip).limit(effectiveLimit);
       if(!orderhistories)
          return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus,"Order histories not found"));
 
@@ -201,7 +249,8 @@ const getOrderhistories = async (req,res) => {
          return order;
        });
 
-      res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK, 'Order histories fetched successfully',updatedOrderHistories));
+      res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK, 'Order histories fetched successfully',
+         {orders:updatedOrderHistories,totalPages,currentPage:page}));
       
    } catch (error) {
       console.log(error);
@@ -209,6 +258,7 @@ const getOrderhistories = async (req,res) => {
    }
 }
 
+// update order status 
 const updateOrderStatus = async (req,res) => {
    try {
       const {status,itemId,orderId} = req.body;
@@ -219,8 +269,11 @@ const updateOrderStatus = async (req,res) => {
          return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus.NOT_FOUND,"Item in the order is not found"));
 
       const affectedItem = updatedOrder.items.find(item => item._id.toString() === itemId);
-
+      console.log('updatedOrder  in order:>> ', updatedOrder);
       if(status === "Cancelled" && affectedItem){
+         if(updatedOrder.paymentStatus === "Paid")
+            await refund(affectedItem,req.user.id,updatedOrder, "Refund for product cancellation");
+
             await Product.updateOne(
                {_id:affectedItem.productId,"variants.size":affectedItem.size},
                { $inc: { "variants.$.stock": affectedItem.quantity } }
@@ -228,37 +281,12 @@ const updateOrderStatus = async (req,res) => {
       }
 
       if(status === "Returned" && affectedItem){
-            await Product.updateOne(
-               {_id:affectedItem.productId,"variants.size":affectedItem.size},
-               { $inc: { "variants.$.stock": affectedItem.quantity } }
-            ); 
+         await Product.updateOne(
+            {_id:affectedItem.productId,"variants.size":affectedItem.size},
+            { $inc: { "variants.$.stock": affectedItem.quantity } }
+         ); 
 
-            const {price,quantity} = affectedItem;
-            const totalOrderPrice = updatedOrder.totalPrice;
-            const totalCouponDiscount = updatedOrder.couponDiscount || 0;
-
-            const itemTotal = price * quantity;
-            const proportionalCouponDiscount = (itemTotal / totalOrderPrice) * totalCouponDiscount;
-
-            const refundAmount = itemTotal - proportionalCouponDiscount;
-            const userId = req.user.id;
-
-            let wallet = await Wallet.findOne({userId});
-            if(!wallet){
-               wallet = new Wallet({
-                  userId,
-                  balance:0,
-                  histories:[]
-               });
-            }
-
-            wallet.balance += refundAmount;
-            wallet.histories.push({
-               type:"Credit",
-               amount:refundAmount,
-            });
-
-            await wallet.save();
+         await refund(affectedItem,req.user.id,updatedOrder,"Refund for product return");
       }
 
       res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK, 'Order status updated successfully')); 
@@ -269,13 +297,14 @@ const updateOrderStatus = async (req,res) => {
    }
 }
 
+// get specific order
 const getOneOrder = async (req,res) => {
    try {
       const {orderId} = req.params;
 
       const orderData = await Order.findById(orderId).populate('items.productId').lean();
       if(!orderData)
-         return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus,"Order details not found"));
+         return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus.NOT_FOUND,"Order details not found"));
 
       const updatedOrderData = {
          ...orderData,
@@ -296,10 +325,135 @@ const getOneOrder = async (req,res) => {
    }
 }
 
+const downloadPDFReport = async (req,res) => {
+ try {
+     const { filter, startDate, endDate } = req.query;
+  
+     const dateFilter = getDateFilter(filter,startDate,endDate);
+     const salesData = await Order.find(dateFilter).populate("items.productId");
+  
+     if (!salesData || salesData.length === 0) 
+        return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus.NOT_FOUND,"Could'nt fetch sales report"));
+  
+     const pdf = new jsPDF();
+
+     // title
+     pdf.text("DORESU Sales Report",10,10);
+  
+     // table
+     pdf.autoTable({ 
+      startY: 20,
+       head: [
+        [
+          "Order ID",
+          "Costomer Name",
+          "Date",
+          "Items",
+          "Payment Method",
+          "Price",
+        ],
+      ],
+      body:salesData.map((order) => [
+        order._id,
+        order.shippingAddress.name,
+        new Date(order.createdAt).toLocaleString(),
+        order.totalQuantity,
+        order.paymentMethod,
+        order.totalPrice.toFixed(2),
+      ]),
+      styles:{
+         fontSize:10,
+         cellPadding:2
+      },
+       tableWidth:"wrap",
+       headStyles: {
+         fontSize: 11, 
+         halign: "center",
+       },
+       bodyStyles: {
+         valign: "middle", 
+         halign: "left",
+       },
+       margin: { left: 10 },
+
+     });
+
+     const pdfData = pdf.output("arraybuffer");
+  
+     res.setHeader("Content-Type", "application/pdf");
+     res.setHeader("Content-Disposition", "attachment; filename=SalesReport.pdf");
+  
+     res.send(Buffer.from(pdfData));
+ } catch (error) {
+      console.log(error);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(createResponse(HttpStatus.INTERNAL_SERVER_ERROR,"Internal Server Error"));
+ }
+}
+
+const downloadXLReport = async(req,res) => {
+  try {
+    const { filter, startDate, endDate } = req.query;
+   
+      const dateFilter = getDateFilter(filter,startDate,endDate);
+      const salesData = await Order.find(dateFilter).populate("items.productId");
+   
+      if (!salesData || salesData.length === 0) 
+         return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus.NOT_FOUND,"Could'nt fetch sales report"));
+
+      const workBook = new ExcelJS.Workbook();
+      const worksheet = workBook.addWorksheet("DORESU Sales Report");
+
+      // headers
+      worksheet.columns = [
+         { header: "Order ID", key: "id", width: 25 },
+         { header: "Customer Name", key: "customerName", width: 20 },
+         { header: "Date", key: "date", width: 20 },
+         { header: "Items", key: "items", width: 40 },
+         { header: "Payment Method", key: "paymentMethod", width: 20 },
+         { header: "Price", key: "price", width: 15 },
+       ];
+
+       salesData.forEach((order) => {
+         worksheet.addRow({
+            id:order._id,
+            customerName:order.shippingAddress.name,
+            date:new Date(order.createdAt),
+            items:order.totalQuantity,
+            paymentMethod:order.paymentMethod,
+            price:order.totalPrice.toFixed(2),
+         });
+       });
+
+       const headerRow = worksheet.getRow(1);
+       headerRow.eachCell((cell) => {
+         cell.font = { bold:true },
+         cell.alignment = { vertical: "middle", horizontal: "center" }
+       });
+
+       res.setHeader(
+         "Content-Type",
+         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+       );
+       res.setHeader(
+         "Content-Disposition",
+         "attachment; filename=DORESU_Sales_Report.xlsx"
+       );
+   
+       await workBook.xlsx.write(res);
+       res.end();
+
+  } catch (error) {
+      console.log(error);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(createResponse(HttpStatus.INTERNAL_SERVER_ERROR,"Internal Server Error"));
+  }
+}
+
 module.exports = {
    placeOrder,
    getOrderhistories,
    updateOrderStatus,
    getOneOrder,
-   verifyPayment
+   verifyPayment,
+   downloadPDFReport,
+   downloadXLReport
 }

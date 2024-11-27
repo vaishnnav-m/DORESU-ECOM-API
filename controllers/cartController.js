@@ -51,7 +51,7 @@ const getCart = async (req,res) => {
       let cartData = await Cart.findOne({userId})
       .populate({
          path:'products.productId',
-         select:'productName price gallery offer',
+         select:'productName price gallery offer variants',
          populate:{
             path:'offer',
             select: 'offerName offerValue startDate endDate',
@@ -73,6 +73,8 @@ const getCart = async (req,res) => {
          const product = item.productId;
          const originalPrice = item.price;
          const offerValue = product?.offer?.offerValue || 0;
+         const variant = product?.variants?.find((v) => v.size === item.size);
+         console.log(variant);
 
          const priceAfterDiscount = Math.floor(originalPrice - (originalPrice * offerValue) / 100)
          totalPriceAfterDiscount += priceAfterDiscount * item.quantity;
@@ -84,6 +86,7 @@ const getCart = async (req,res) => {
               ...product,
               gallery: imageUrl,
             },
+            quantityLeft:variant.stock || 0
           };
       });
       

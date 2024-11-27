@@ -1,4 +1,4 @@
-const { create } = require("../models/cartSchema");
+const { create, updateOne } = require("../models/cartSchema");
 const Coupon = require("../models/couponSchema");
 const Product = require('../models/productsSchema')
 const {HttpStatus,createResponse} = require("../utils/generateResponse");
@@ -43,10 +43,10 @@ const addCoupon = async (req, res) => {
 };
 
 const getCoupons = async (req,res) => {
-   if(!req.user.isAdmin)
-      return res.status(HttpStatus.FORBIDDEN).json(createResponse(HttpStatus.FORBIDDEN,"You don't have the permission"));
    try {
-      const coupons = await Coupon.find();
+      const filter = req.user?.isAdmin ? {} : {isActive:true};
+      
+      const coupons = await Coupon.find(filter);
       
       if(!coupons)
          return res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"No coupons were found",[]));
@@ -94,8 +94,56 @@ const applyCoupon = async (req,res) => {
    }
 }
 
+const editCoupons = async (req,res) => {
+   if(!req.user?.isAdmin){
+      return res.status(HttpStatus.FORBIDDEN).json(createResponse(HttpStatus.FORBIDDEN,"You don't have the permission"));
+   }
+   try {
+      const {
+         couponId,
+         couponCode,
+         discountValue,
+         minPurchaseAmount,
+         maxDiscount,
+         usageLimit,
+         startDate,
+         endDate,
+      } = req.body;
+
+      
+      const couponData = await Coupon.findById(couponId);
+      if(!couponData)
+         return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus.NOT_FOUND,"coupon not found"));
+
+      if(couponCode !== couponData.couponCode){
+         const couponExists = await Coupon.findOne({couponCode});
+         if(couponExists)
+            return res.status(HttpStatus.CONFLICT).json(createResponse(HttpStatus.CONFLICT,"coupon code already exists"));
+      }
+      
+      const newCoupon = {
+         couponCode: couponCode || couponData.couponCode,
+         discountValue: discountValue || couponData.discountValue,
+         minPurchaseAmount: minPurchaseAmount || couponData.minPurchaseAmount,
+         maxDiscount: maxDiscount || couponData.maxDiscount,
+         usageLimit: usageLimit || couponData.usageLimit,
+         startDate: startDate || couponData.startDate,
+         endDate: endDate || couponData.endDate,
+      }
+
+      await Coupon.findByIdAndUpdate(couponId,newCoupon)
+
+      res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"Coupon updated Successfully"));
+      
+   } catch (error) {
+      console.log(error);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(createResponse(HttpStatus.INTERNAL_SERVER_ERROR,"Internal Server Error")) 
+   }
+}
+
 module.exports = {
    addCoupon,
    getCoupons,
-   applyCoupon
+   applyCoupon,
+   editCoupons
 }
