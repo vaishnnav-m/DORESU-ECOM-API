@@ -78,4 +78,6 @@ user_route.post('/applyCoupon',verifyToken,couponController.applyCoupon);
 
 user_route.get('/getWallet',verifyToken,walletController.getUserWallet);
 
+user_route.get('/downloadInvoice/:orderId',verifyToken,orderController.downloadInvoice);
+
 module.exports = user_route;

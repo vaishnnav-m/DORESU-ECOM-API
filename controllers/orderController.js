@@ -138,7 +138,7 @@ const placeOrder = async (req,res) => {
          totalQuantity,
          paymentMethod:paymentMethod,
          paymentStatus:"pending",
-         razorpayOrderId: paymentMethod === "online" ? razorpayOrderId : null
+         razorpayOrderId: paymentMethod === "online" && razorpayOrderId 
       });
    
       await newOrder.save();
@@ -219,21 +219,24 @@ const getOrderhistories = async (req,res) => {
    try {
       const { filter, startDate, endDate, limit = 10, page = 1 } = req.query;
       const filterCondition = req.user.isAdmin ? {} : { userId: req.user.id };
+      console.log(req.user);
       const maxLimit = 20;
 
       const effectiveLimit = Math.min(limit,maxLimit);
       const skip = (page-1)*effectiveLimit;
-      const totalOrders = await Order.countDocuments();
+      const totalOrders = await Order.countDocuments(filterCondition);
       const totalPages = Math.ceil(totalOrders / limit);
 
 
       const dateFilter = getDateFilter(filter, startDate, endDate);
 
-       const filterQuery = { ...filterCondition, ...dateFilter };
+      const filterQuery = { ...filterCondition, ...dateFilter };
+      console.log(filterQuery);
 
       const orderhistories = await Order.find(filterQuery).populate("items.productId").sort({createdAt:-1}).skip(skip).limit(effectiveLimit);
       if(!orderhistories)
          return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus,"Order histories not found"));
+
 
       const updatedOrderHistories = orderhistories.map((order) => {
          order.items = order.items.map((item) => {
@@ -448,6 +451,54 @@ const downloadXLReport = async(req,res) => {
   }
 }
 
+const downloadInvoice = async (req,res) => {
+   const {orderId} = req.params
+   try {
+      const order = await Order.findById(orderId).populate('items.productId')
+      if(!order)
+         return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus.NOT_FOUND,"order not found"));
+
+      const pdf = new jsPDF();
+
+      // title
+      pdf.setFontSize(20);
+      pdf.text('Invoice',105,20,{ align:'center' });
+
+      pdf.setFontSize(12);
+      pdf.text(`Order ID: ${order._id}`,20, 40);
+      pdf.text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`, 20, 50);
+      pdf.text(`Customer: ${order.shippingAddress.name}`, 20, 60);
+
+      const tableColumns = ['Product', 'Quantity', 'Price', 'Total'];
+      const tableRows = order.items.map(item => [
+         item.productId.name,
+         item.quantity,
+         `$${item.price}`,
+         `$${(item.price * item.quantity).toFixed(2)}`
+      ]);
+
+      pdf.autoTable({
+         head: [tableColumns],
+         body: tableRows,
+         startY: 70,
+         styles: { halign: 'center' },
+       });
+
+      const finalY = pdf.previousAutoTable.finalY + 10;
+      pdf.text(`Total Amount: $${order.totalPrice}`, 20, finalY);
+
+      const pdfData = pdf.output("arraybuffer");
+  
+     res.setHeader("Content-Type", "application/pdf");
+     res.setHeader("Content-Disposition", `attachment; filename=invoice-${order._id}.pdf`);
+  
+     res.send(Buffer.from(pdfData));
+   } catch (error) {
+      console.log(error);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(createResponse(HttpStatus.INTERNAL_SERVER_ERROR,"Internal Server Error")); 
+   }
+}
+
 module.exports = {
    placeOrder,
    getOrderhistories,
@@ -455,5 +506,6 @@ module.exports = {
    getOneOrder,
    verifyPayment,
    downloadPDFReport,
-   downloadXLReport
+   downloadXLReport,
+   downloadInvoice
 }

@@ -38,6 +38,10 @@ const productSchema = mongoose.Schema({
     type:mongoose.Schema.Types.ObjectId,
     ref:"offer"
   },
+  delivery:{
+    type:Number,
+    default:0
+  },
   isActive: {
     type: Boolean,
     default: true,

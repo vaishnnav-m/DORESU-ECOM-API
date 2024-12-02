@@ -33,14 +33,14 @@ const google_authentication = async (req, res) => {
 
       // genearating accessToken
       const accessToken = jwt.sign(
-        { id: newUser._id },
+        { id: newUser._id , isAdmin:false},
         process.env.ACCESS_TOKEN_SECRET,
         { expiresIn: "5m" }
       );
 
       // generating refresh token
       const refreshToken = jwt.sign(
-        { id: newUser._id },
+        { id: newUser._id, isAdmin:false},
         process.env.REFRESH_TOKEN_SECRET,
         { expiresIn: "7d" }
       );

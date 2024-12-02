@@ -90,14 +90,14 @@ const verifyOtp = async (req, res) => {
 
     // genearating accessToken
     const accessToken = jwt.sign(
-      { id: user._id },
+      { id: user._id, isAdmin:false },
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: "5m" }
     );
 
     // generating refresh token
     const refreshToken = jwt.sign(
-      { id: user._id },
+      { id: user._id, isAdmin:false },
       process.env.REFRESH_TOKEN_SECRET,
       { expiresIn: "7d" }
     );
@@ -172,14 +172,14 @@ const postLogin = async (req, res) => {
 
     // genearating accessToken
     const accessToken = jwt.sign(
-      { id: userData._id },
+      { id: userData._id, isAdmin:false },
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: "5m" }
     );
 
     // generating refresh token
     const refreshToken = jwt.sign(
-      { id: userData._id },
+      { id: userData._id, isAdmin:false},
       process.env.REFRESH_TOKEN_SECRET,
       { expiresIn: "7d" }
     );
@@ -215,8 +215,9 @@ const refreshToken = (req, res) => {
         const userData = await User.findById(user.id);
         if (!userData || !userData.isActive) return res.status(401).json({ message: "Unautherized" });
 
+        console.log("userData",userData);
         const accessToken = jwt.sign(
-          { id: userData._id, isAdmin:true },
+          { id: userData._id, isAdmin:user.isAdmin },
           process.env.ACCESS_TOKEN_SECRET,
           { expiresIn: "5m" }
         );
