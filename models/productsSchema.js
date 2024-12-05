@@ -38,7 +38,7 @@ const productSchema = mongoose.Schema({
     type:mongoose.Schema.Types.ObjectId,
     ref:"offer"
   },
-  delivery:{
+  deliveryCharge:{
     type:Number,
     default:0
   },

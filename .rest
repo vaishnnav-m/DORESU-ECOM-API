@@ -11,5 +11,5 @@ Content-Type: application/json
 }
 
 ###
-GET http://localhost:3000/api/admin/getProducts
+GET http://localhost:3000/api/admin/getChartData?filter=weekly
 Content-Type: application/json

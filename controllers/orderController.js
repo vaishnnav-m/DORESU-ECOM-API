@@ -45,6 +45,7 @@ const refund = async (affectedItem,userId,updatedOrder,remark) => {
 
 // function to get date filter
 const getDateFilter = (filter, startDate, endDate) => {
+      console.log("inside the date",startDate,endDate,filter);
       if (filter === "today") {
          const today = new Date();
          const startOfDay = new Date(today.setHours(0, 0, 0, 0));
@@ -84,6 +85,7 @@ const getDateFilter = (filter, startDate, endDate) => {
            },
          };
        }
+       return {};
 }
 
 // ------------------ Controller Functions ------------------ //
@@ -217,9 +219,8 @@ const verifyPayment = async (req,res) => {
 // get all orders
 const getOrderhistories = async (req,res) => {
    try {
-      const { filter, startDate, endDate, limit = 10, page = 1 } = req.query;
+      const { filter, startDate = "", endDate = "", limit = 10, page = 1 } = req.query;
       const filterCondition = req.user.isAdmin ? {} : { userId: req.user.id };
-      console.log(req.user);
       const maxLimit = 20;
 
       const effectiveLimit = Math.min(limit,maxLimit);
@@ -227,17 +228,15 @@ const getOrderhistories = async (req,res) => {
       const totalOrders = await Order.countDocuments(filterCondition);
       const totalPages = Math.ceil(totalOrders / limit);
 
+      const dateFilter = getDateFilter(filter, startDate ? startDate : null, endDate ? endDate : null);
 
-      const dateFilter = getDateFilter(filter, startDate, endDate);
-
-      const filterQuery = { ...filterCondition, ...dateFilter };
-      console.log(filterQuery);
+      const filterQuery = { ...filterCondition, ...(dateFilter ? { ...dateFilter } : {}) };
 
       const orderhistories = await Order.find(filterQuery).populate("items.productId").sort({createdAt:-1}).skip(skip).limit(effectiveLimit);
       if(!orderhistories)
          return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus,"Order histories not found"));
 
-
+      
       const updatedOrderHistories = orderhistories.map((order) => {
          order.items = order.items.map((item) => {
            const imageUrls = item.productId.gallery.map((image) => `${req.protocol}://${req.get("host")}/uploads/products/${image}`);
@@ -471,10 +470,10 @@ const downloadInvoice = async (req,res) => {
 
       const tableColumns = ['Product', 'Quantity', 'Price', 'Total'];
       const tableRows = order.items.map(item => [
-         item.productId.name,
+         item.productId.productName,
          item.quantity,
-         `$${item.price}`,
-         `$${(item.price * item.quantity).toFixed(2)}`
+         `₹${item.price}`,
+         `₹${(item.price * item.quantity).toFixed(2)}`
       ]);
 
       pdf.autoTable({

@@ -7,7 +7,7 @@ const addProduct = async (req, res) => {
   const {productName,description,category,variants,} = req.body;
 
    if (!req.user.isAdmin)
-     return res.status(HttpStatus.UNAUTHORIZED).json(HttpStatus.FORBIDDEN,"You don't have permission");
+     return res.status(HttpStatus.UNAUTHORIZED).json(HttpStatus.UNAUTHORIZED,"You don't have permission");
    try {
     const updatedVariants = variants.map(variant => ({
       ...variant,

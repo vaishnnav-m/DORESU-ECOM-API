@@ -6,8 +6,10 @@ const productController = require('../controllers/productController');
 const orderController = require('../controllers/orderController');
 const offerController = require('../controllers/offerController');
 const couponController = require('../controllers/couponController');
+const dashboardController = require('../controllers/dashboardController');
 const verifyToken = require('../middlewares/tokenCheck');
 const upload = require('../middlewares/imageUpload');
+
 
 admin_route.post("/login", adminController.adminLogin);
 
@@ -57,5 +59,8 @@ admin_route.get('/salesReportPdf',verifyToken,orderController.downloadPDFReport)
 
 admin_route.get('/salesReportExcel',verifyToken,orderController.downloadXLReport);
 
+admin_route.get('/getDashboardData',verifyToken,dashboardController.getDashboardData);
+
+admin_route.get('/getChartData',verifyToken,dashboardController.getChartData);
 
 module.exports = admin_route;
