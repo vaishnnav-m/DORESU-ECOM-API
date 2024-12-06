@@ -141,9 +141,31 @@ const editCoupons = async (req,res) => {
    }
 }
 
+const updateCouponStatus = async (req,res) => {
+   if(!req.user.isAdmin)
+      return res.status(HttpStatus.FORBIDDEN).json(createResponse(HttpStatus.FORBIDDEN,"You don't have the permission"));
+   try {
+      const { couponId } = req.body;
+
+      console.log('couponId :>> ', req.body);
+      const couponData = await Coupon.findById(couponId);
+      if(!couponData)
+         return res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"No coupon were found"));
+      const newStatus = !couponData.isActive; 
+      await Coupon.findByIdAndUpdate(couponId,{isActive:newStatus})
+
+      res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"successfully updated the coupon"));
+      
+   } catch (error) {
+      console.log(error);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(createResponse(HttpStatus.INTERNAL_SERVER_ERROR,"Internal Server Error"))
+   }
+}
+
 module.exports = {
    addCoupon,
    getCoupons,
    applyCoupon,
-   editCoupons
+   editCoupons,
+   updateCouponStatus
 }
