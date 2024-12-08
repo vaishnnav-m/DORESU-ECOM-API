@@ -22,7 +22,7 @@ const addAddress = async (req,res) => {
          state,
          isDefault
       });
-      await addressData.save();
+      await addressData.save();//no save
 
       res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"Address added successfully"))
    } catch (error) {
