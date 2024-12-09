@@ -7,7 +7,7 @@ const path = require('path')
 
 // enabling cors
 const corsOptions = {
-  origin:'http://localhost:5173',
+  origin:'https://doresu.vercel.app',
   credentials: true,
 }
 app.use(cors(corsOptions))
