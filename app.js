@@ -6,7 +6,7 @@ const cookieParser = require('cookie-parser');
 const path = require('path')
 
 
-const allowedOrigins = ['https://doresu.vercel.app',"http://localhost:5173/"];
+const allowedOrigins = ['https://doresu.vercel.app',"http://localhost:5173"];
 // enabling cors
 const corsOptions = {
   origin: function (origin,callback){
