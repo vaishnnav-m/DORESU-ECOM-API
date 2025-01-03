@@ -23,6 +23,9 @@ const addCoupon = async (req, res) => {
       if(couponExists)
          return res.status(HttpStatus.CONFLICT).json(createResponse(HttpStatus.CONFLICT,"coupon code already exists"));
 
+      if(discountValue >= 100)
+         return res.status(HttpStatus.BAD_REQUEST).json(createResponse(HttpStatus.BAD_REQUEST,"can not give 100% discount"));
+
       const newCoupon = new Coupon({
          couponCode,
          discountValue,
@@ -47,13 +50,13 @@ const getCoupons = async (req,res) => {
       const filter = req.user?.isAdmin ? {} : {isActive:true};
       
       const coupons = await Coupon.find(filter);
+      const updatedCoupons = coupons.filter(coupon => coupon.usedCount < coupon.usageLimit);
       
-      if(!coupons)
-         return res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"No coupons were found",[]));
+      if(req.user?.isAdmin)
+         return res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"successfully fetched coupons",coupons));
 
-      res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"successfully fetched coupons",coupons));
+      res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"successfully fetched coupons",updatedCoupons));
 
-      
    } catch (error) {
       console.log(error);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(createResponse(HttpStatus.INTERNAL_SERVER_ERROR,"Internal Server Error"))

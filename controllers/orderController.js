@@ -225,13 +225,15 @@ const getOrderhistories = async (req,res) => {
 
       const effectiveLimit = Math.min(limit,maxLimit);
       const skip = (page-1)*effectiveLimit;
-      const totalOrders = await Order.countDocuments(filterCondition);
-      const totalPages = Math.ceil(totalOrders / limit);
 
       const dateFilter = getDateFilter(filter, startDate ? startDate : null, endDate ? endDate : null);
 
       const filterQuery = { ...filterCondition, ...(dateFilter ? { ...dateFilter } : {}) };
 
+      // finding the totalPages
+      const totalOrders = await Order.countDocuments(filterCondition);
+      const totalPages = Math.ceil(totalOrders / limit);
+      
       const orderhistories = await Order.find(filterQuery).populate("items.productId").sort({createdAt:-1}).skip(skip).limit(effectiveLimit);
       if(!orderhistories)
          return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus,"Order histories not found"));

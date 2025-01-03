@@ -8,8 +8,12 @@ const addOffer = async (req,res) => {
       return res.status(HttpStatus.FORBIDDEN).json(createResponse(HttpStatus.FORBIDDEN,"You don't have the permission"));
    try {
       const isExistingOffer = await Offer.findOne({targetId});
+
       if(isExistingOffer)
          return res.status(HttpStatus.CONFLICT).json(createResponse(HttpStatus.CONFLICT,"Offer for this product is already exists"));
+
+      if(offerValue >= 100)
+         return res.status(HttpStatus.BAD_REQUEST).json(createResponse(HttpStatus.BAD_REQUEST,"can not give 100% discount"));
 
       const newOffer = new Offer({
          offerName,
