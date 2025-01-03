@@ -231,7 +231,7 @@ const getOrderhistories = async (req,res) => {
       const filterQuery = { ...filterCondition, ...(dateFilter ? { ...dateFilter } : {}) };
 
       // finding the totalPages
-      const totalOrders = await Order.countDocuments(filterCondition);
+      const totalOrders = await Order.countDocuments(filterQuery);
       const totalPages = Math.ceil(totalOrders / limit);
       
       const orderhistories = await Order.find(filterQuery).populate("items.productId").sort({createdAt:-1}).skip(skip).limit(effectiveLimit);

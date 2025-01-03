@@ -123,6 +123,9 @@ const editCoupons = async (req,res) => {
          if(couponExists)
             return res.status(HttpStatus.CONFLICT).json(createResponse(HttpStatus.CONFLICT,"coupon code already exists"));
       }
+
+      if(discountValue >= 100)
+         return res.status(HttpStatus.BAD_REQUEST).json(createResponse(HttpStatus.BAD_REQUEST,"can not give 100% discount"));
       
       const newCoupon = {
          couponCode: couponCode || couponData.couponCode,
