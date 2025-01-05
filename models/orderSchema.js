@@ -87,8 +87,6 @@ const orderSchema = new mongoose.Schema(
     },
     razorpayOrderId: {
       type: String,
-      unique: true,
-      sparse: true,
     },
     couponDiscount:{
       type:Number,
@@ -96,8 +94,6 @@ const orderSchema = new mongoose.Schema(
     },
     razorpayPaymentId: {
       type: String,
-      unique: true,
-      sparse: true,
     },
   },
   { timestamps: true }
