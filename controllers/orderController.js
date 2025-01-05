@@ -140,7 +140,7 @@ const placeOrder = async (req,res) => {
          totalQuantity,
          paymentMethod:paymentMethod,
          paymentStatus:"pending",
-         razorpayOrderId: paymentMethod === "online" && razorpayOrderId 
+         razorpayOrderId: paymentMethod === "online" ? razorpayOrderId : null
       });
    
       await newOrder.save();

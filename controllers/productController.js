@@ -137,7 +137,7 @@ const addProduct = async (req, res) => {
     if(!productData)
       return res.status(HttpStatus.NOT_FOUND).json(createResponse(HttpStatus,"Product not found"));
 
-    const imageUrls = productData.gallery.map((image) => ({url:`${req.protocol}://${req.get("host")}/uploads/products/${image}`,file:image}));
+    const imageUrls = productData.gallery.map((image) => ({url:`https://${req.get("host")}/uploads/products/${image}`,file:image}));
     const updatedProduct = { ...productData.toObject(), gallery: imageUrls }
 
     res.status(HttpStatus.OK).json(createResponse(HttpStatus.OK,"Product fetched successfully",updatedProduct));
