@@ -5,7 +5,7 @@ const addCategory = async (req, res) => {
      return res.status(403).json({ message: "You have no permission" });
    try {
      const categoryName = await Category.findOne({
-       categoryName: req.body.categoryName,
+       categoryName: { $regex: `^${req.body.categoryName}$`, $options: "i" },
      });
  
      if (categoryName)
