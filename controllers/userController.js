@@ -105,7 +105,7 @@ const verifyOtp = async (req, res) => {
     // sending refresh token
     res.cookie("jwt", refreshToken, {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
@@ -188,7 +188,7 @@ const postLogin = async (req, res) => {
     // sending refresh token
     res.cookie("jwt", refreshToken, {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
