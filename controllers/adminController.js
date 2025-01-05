@@ -40,7 +40,7 @@ const adminLogin = async (req, res) => {
   // sending refresh token
   res.cookie("adminJwt", refreshToken, {
     httpOnly: true,
-    secure: false,
+    secure: process.env.NODE_ENV === "production",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
