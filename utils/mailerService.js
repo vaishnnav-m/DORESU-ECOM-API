@@ -41,4 +41,40 @@ const sendVerificationMail = async (user, otp) => {
   }
 };
 
-module.exports = sendVerificationMail;
+const sendVerifyOtp = async (user, otp) => {
+  const mailOptions = {
+    from: "doresuecom@gmail.com",
+    to: user.email,
+    subject: "Forgot Password - OTP for Reset",
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.5; padding: 20px; background-color: #f9f9f9;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+          <h2 style="color: #333; text-align: center;">Reset Your Password</h2>
+          <p>Dear ${user.firstName + " " + user.lastName},</p>
+          <p>We received a request to reset your password for your DORESU account. To complete the process, please use the OTP below:</p>
+          <div style="text-align: center; padding: 10px 0;">
+            <span style="display: inline-block; padding: 10px 20px; font-size: 35px; letter-spacing: 30px; border-radius: 5px;">
+              ${otp}
+            </span>
+          </div>
+          <p>This OTP is valid for <strong>1 minute</strong>. If it expires, please request a new OTP.</p>
+          <p>Best regards,<br><strong>DORESU Team</strong></p>
+          <hr style="border-top: 1px solid #eee; margin-top: 20px;" />
+          <small style="color: #999;">If you didn't request this, please ignore this email.</small>
+        </div>
+      </div>
+   `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.log("Error sending verification email:", error);
+    throw new Error("Failed to send verification email");
+  }
+};
+
+module.exports = {
+  sendVerificationMail,
+  sendVerifyOtp
+};

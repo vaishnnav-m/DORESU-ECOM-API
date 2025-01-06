@@ -3,7 +3,7 @@ const Otp = require("../models/otpModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const sendVerificationMail = require("../utils/mailerService");
+const {sendVerificationMail,sendVerifyOtp} = require("../utils/mailerService");
 
 // function to hash password
 const hashPassword = async (password) => {
@@ -123,7 +123,7 @@ const verifyOtp = async (req, res) => {
 // user resend OTP controller
 const resendOtp = async (req, res) => {
   try {
-    const {userId} = req.body;
+    const {userId,type = ''} = req.body;
     const user = await User.findById(userId);
 
     if (!user) return res.status(404).json({ message: "Cannot find the user" });
@@ -136,6 +136,13 @@ const resendOtp = async (req, res) => {
     res.json({
       message: "Successfully send new OTP. Check your mail",
     });
+
+    if(type === "forgot"){
+      await sendVerifyOtp(
+        { email: user.email, firstName: user.firstName, lastName: user.lastName },
+        otp
+      );
+    }
 
     await sendVerificationMail(
       { email: user.email, firstName: user.firstName, lastName: user.lastName },
@@ -168,8 +175,8 @@ const postLogin = async (req, res) => {
 
     if (!userData.isActive)
       return res
-        .status(403)
-        .json({ message: "Sorry you are blocked from the site" });
+        .status(401)
+        .json({ message: "Your account is blocked from the site.Please contact support" });
 
     // genearating accessToken
     const accessToken = jwt.sign(
@@ -263,6 +270,77 @@ const updateUser = async (req, res) => {
   }
 }
 
+const sendForgotOtp = async (req,res) => {
+  try {
+    const {email} = req.body;
+    const user = await User.findOne({email});
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.isActive) {
+      return res
+          .status(401)
+          .json({ message: "Your account is blocked from the site.Please contact support" });
+    }
+
+    // otp generation
+    const otp = await genearateOtp(user);
+
+    res.json({
+      message: "An OTP has been sent to your email.",
+      userId: user._id,
+    });
+
+    await sendVerifyOtp(
+      { email: user.email, firstName: user.firstName, lastName: user.lastName },
+      otp
+    );
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+const verifyForgotOtp = async (req,res) => {
+  try {
+    const {otp,userId} = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "Cannot find the user" });
+
+    const otpRecord = await Otp.findOne({userId});
+
+    // check the otp is valid or not
+    if (!otpRecord || otpRecord.otp !== otp)
+      return res.status(400).json({ message: "Invalid or Expired OTP" });
+
+    await Otp.deleteOne({ userId });
+
+    res.status(200).json({message:"Otp verified successfully",userId});
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+const forgotPassword = async (req,res) => {
+    try {
+      const {newPassword,userId} = req.body;
+  
+      const hashedPassword = await hashPassword(newPassword);
+  
+      await User.findByIdAndUpdate(userId,{password:hashedPassword});
+      res.json({message:"Successfully updated password"});
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+}
+
 const resetPassword = async (req,res) => {
   try {
     const {userId,oldPassword,newPassword} = req.body;
@@ -314,5 +392,8 @@ module.exports = {
   getUser,
   logoutUser,
   updateUser,
-  resetPassword
+  resetPassword,
+  sendForgotOtp,
+  verifyForgotOtp,
+  forgotPassword
 };

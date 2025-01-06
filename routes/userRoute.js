@@ -28,6 +28,12 @@ user_route.get('/getUser',verifyToken,userController.getUser);
 
 user_route.put('/updateUser',verifyToken,userController.updateUser);
 
+user_route.post('/sendForgotOtp',userController.sendForgotOtp);
+
+user_route.post('/verifyForgotOtp',userController.verifyForgotOtp);
+
+user_route.post('/forgotPassword',userController.forgotPassword);
+
 user_route.patch('/resetPassword',verifyToken,userController.resetPassword);
 
 user_route.post('/logout',verifyToken,userController.logoutUser);

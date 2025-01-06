@@ -1,13 +1,28 @@
-### Signup User
-POST  http://localhost:3000/api/signup
+
+POST http://localhost:3000/api/sendForgotOtp
 Content-Type: application/json
 
 {
-    "userID": "670e35be5188a39afc116b6f",
-    "lastName": "m",
-    "email": "vaishnnav0@gmail.com",
-    "phone": "Hello@123",
-    "password": "Hello@123"
+    "email": "vaishnnav0@gmail.com"
+}
+
+###
+
+POST  http://localhost:3000/api/verifyForgotOtp
+Content-Type: application/json
+
+{
+    "otp": "193225",
+    "userId": "672769c529d7df5fce327048"
+}
+
+###
+POST  http://localhost:3000/api/forgotPassword
+Content-Type: application/json
+
+{
+    "newPassword": "Hello@123",
+    "userId": "672769c529d7df5fce327048"
 }
 
 ###
