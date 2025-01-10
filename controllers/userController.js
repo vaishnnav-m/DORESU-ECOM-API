@@ -17,7 +17,7 @@ const hashPassword = async (password) => {
 // otp generation
 const genearateOtp = async (user) => {
   const otp = crypto.randomInt(100000, 999999).toString();
-  const otpExpiresAt = Date.now();
+  const otpExpiresAt = Date.now() + 60 * 1000;
   id = user._id || user.userId;
   const newOtp = new Otp({
     userId: id,
@@ -80,7 +80,7 @@ const verifyOtp = async (req, res) => {
     const otpRecord = await Otp.findOne({ userId: req.body.userId });
 
     // check the otp is valid or not
-    if (!otpRecord || otpRecord.otp !== req.body.otp)
+    if (!otpRecord || Date.now() >= otpRecord.otpExpiresAt || otpRecord.otp !== req.body.otp)
       return res.status(400).json({ message: "Invalid or Expired OTP" });
 
     user.isVerified = true;
@@ -314,7 +314,7 @@ const verifyForgotOtp = async (req,res) => {
     const otpRecord = await Otp.findOne({userId});
 
     // check the otp is valid or not
-    if (!otpRecord || otpRecord.otp !== otp)
+    if (!otpRecord || Date.now() >= otpRecord.otpExpiresAt || otpRecord.otp !== otp)
       return res.status(400).json({ message: "Invalid or Expired OTP" });
 
     await Otp.deleteOne({ userId });

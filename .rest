@@ -12,7 +12,7 @@ POST  http://localhost:3000/api/verifyForgotOtp
 Content-Type: application/json
 
 {
-    "otp": "193225",
+    "otp": "244291",
     "userId": "672769c529d7df5fce327048"
 }
 
