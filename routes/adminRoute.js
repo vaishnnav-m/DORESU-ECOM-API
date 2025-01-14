@@ -13,6 +13,8 @@ const upload = require('../middlewares/imageUpload');
 
 admin_route.post("/login", adminController.adminLogin);
 
+admin_route.post('/logout',adminController.adminLogin);
+
 admin_route.get('/refresh',adminController.refreshToken);
 
 admin_route.get('/getUsers',verifyToken,adminController.getUsers);

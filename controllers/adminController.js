@@ -113,10 +113,27 @@ const updateUserStatus = async (req, res) => {
   }
 };
 
+const logoutAdmin = async (req, res) => {
+  try {
+    const cookies = req.cookies;
+    if (!cookies?.jwt) return res.status(204);
+
+    res.clearCookie("adminJwt", {
+      httpOnly: true,
+      secure: true,
+    });
+    res.json({ message: "cookie is cleared" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 
 module.exports = {
   adminLogin,
   refreshToken,
   getUsers,
   updateUserStatus,
+  logoutAdmin
 };
