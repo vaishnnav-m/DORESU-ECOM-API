@@ -1,9 +1,10 @@
 
-POST http://localhost:3000/api/sendForgotOtp
+POST http://localhost:3000/api/login
 Content-Type: application/json
 
 {
-    "email": "vaishnnav0@gmail.com"
+    "email": "vaishnnav0@gmail.com",
+    "password":"Hello@123"
 }
 
 ###
@@ -28,3 +29,57 @@ Content-Type: application/json
 ###
 GET http://localhost:3000/api/admin/getChartData?filter=weekly
 Content-Type: application/json
+
+
+###
+GET http://localhost:3000/api/admin/login
+
+###
+GET http://localhost:3000/api/admin/getOrderHistories?startDate=2024-12-11&endDate=2025-01-11&filter=custom&page=1&limit=10
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3Mjc2OWM1MjlkN2RmNWZjZTMyNzA0OCIsImlzQWRtaW4iOnRydWUsImlhdCI6MTczNjU2OTU5NiwiZXhwIjoxNzM2NTY5ODk2fQ.u3zHLA7gqJdQ5am_u3f6pMu1UJNs1YVRF7c_6-xw8hI
+
+###
+POST http://localhost:3000/api/placeOrder
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3Mjc2OWM1MjlkN2RmNWZjZTMyNzA0OCIsImlzQWRtaW4iOmZhbHNlLCJpYXQiOjE3MzY4Mjg2MzAsImV4cCI6MTczNjgyODkzMH0.tmKSuk3-_ivRDwab8u62PP9WovZwB_DwafwjHr6EHWk
+Content-Type: application/json
+
+{ 
+    "address": {
+        "city": "kongad",
+        "createdAt": "2024-11-08T04:58:18.520Z",
+        "district": "palakkad",
+        "houseName": "malayarukii",
+        "isDefault": true,
+        "isDeleted": false,
+        "mobile": 9072811675,
+        "name": "Vaishnnav",
+        "pincode": 611234,
+        "state": "kerala",
+        "street": "thadukkasery",
+        "updatedAt": "2025-01-10T06:31:14.774Z",
+        "userId": "672769c529d7df5fce327048",
+        "__v": 0,
+        "_id": "672d9a6afab7de120b3d54b0"
+    }, 
+    "items": [
+        {
+            "price": 265,
+            "productId": {
+                "gallery": "http://doresu.store/uploads/products/1730119564555.webp",
+                "offer": { "_id": "6747f3a61e7938d3d4852b9f", "offerName": "special offer", "offerValue": 30 },
+                "productName": "Pack of 2 Men Typography Round Neck Cotton Blend Grey, Black T-Shirt",
+                "variants": [
+                    { "size": "small", "stock": 80, "price": 379, "_id": "673d59d0d8f8bf85aa264be5" }
+                ],
+                "_id": "671e410e5e999f6757668f89"
+            },
+            "quantity": 1,
+            "quantityLeft": 99,
+            "size": "medium",
+            "_id": "6785dce5f25f016794c59a70"
+        }
+    ], 
+    "paymentMethod": "COD",
+    "totalPrice": 265,
+    "totalQuantity": 1
+}

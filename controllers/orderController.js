@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const ExcelJS = require("exceljs");
 const { jsPDF } = require("jspdf");
 require("jspdf-autotable") 
+const { v4: uuidv4 } = require('uuid');
 
 // ------------------ Helper Functions ------------------ //
 // function to refund 
@@ -45,7 +46,7 @@ const refund = async (affectedItem,userId,updatedOrder,remark) => {
 
 // function to get date filter
 const getDateFilter = (filter, startDate, endDate) => {
-      console.log("inside the date",startDate,endDate,filter);
+
       if (filter === "today") {
          const today = new Date();
          const startOfDay = new Date(today.setHours(0, 0, 0, 0));
@@ -80,8 +81,8 @@ const getDateFilter = (filter, startDate, endDate) => {
          // Custom date filter if "startDate" and "endDate" are provided
          return {
            createdAt: {
-             $gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
-             $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
+            $gte: new Date(`${startDate}T00:00:00`),
+            $lte: new Date(`${endDate}T23:59:59.999`),
            },
          };
        }
@@ -94,6 +95,25 @@ const placeOrder = async (req,res) => {
    try {
       const userId = req.user.id;
       const { address, items, totalPrice, totalQuantity, paymentMethod, couponDiscount, couponCode } = req.body;
+
+      const productIds = items.map(item => item.productId._id);
+      const products = await Product.find({ _id: { $in: productIds } });
+
+      // Check quantity availability
+      for (const item of items) {
+         const product = products.find(prod => prod._id.toString() === item.productId._id);
+         if (!product) {
+            return res.status(400).json({ message: `Product with Name ${item.productId.productName} does not exist.` });
+         }
+
+         const productVariant = product.variants.find(variant => variant.size === item.size);
+
+         if (item.quantity > productVariant.stock) {
+            return res.status(400).json({ 
+               message: `Insufficient stock for product ${product.productName}.` 
+            });
+         }
+      }
 
       let razorpayOrderId = null;    
       if(paymentMethod === 'online'){
@@ -114,8 +134,9 @@ const placeOrder = async (req,res) => {
          createResponse(HttpStatus.INTERNAL_SERVER_ERROR,"Failed to create Razorpay order. Please try again."));
          razorpayOrderId = order.id;
       }
-
+      const orderId = uuidv4();
       const newOrder = new Order({
+         orderId,
          userId,
          items:items.map(item => ({
             productId:item.productId,
@@ -227,6 +248,7 @@ const getOrderhistories = async (req,res) => {
       const skip = (page-1)*effectiveLimit;
 
       const dateFilter = getDateFilter(filter, startDate ? startDate : null, endDate ? endDate : null);
+      console.log(dateFilter)
 
       const filterQuery = { ...filterCondition, ...(dateFilter ? { ...dateFilter } : {}) };
 

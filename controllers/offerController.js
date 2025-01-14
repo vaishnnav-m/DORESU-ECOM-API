@@ -12,8 +12,8 @@ const addOffer = async (req,res) => {
       if(isExistingOffer)
          return res.status(HttpStatus.CONFLICT).json(createResponse(HttpStatus.CONFLICT,"Offer for this product is already exists"));
 
-      if(offerValue >= 100)
-         return res.status(HttpStatus.BAD_REQUEST).json(createResponse(HttpStatus.BAD_REQUEST,"can not give 100% discount"));
+      if(offerValue >= 80)
+         return res.status(HttpStatus.BAD_REQUEST).json(createResponse(HttpStatus.BAD_REQUEST,"Maximum discount limit is 79%"));
 
       const newOffer = new Offer({
          offerName,
