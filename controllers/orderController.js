@@ -248,7 +248,6 @@ const getOrderhistories = async (req,res) => {
       const skip = (page-1)*effectiveLimit;
 
       const dateFilter = getDateFilter(filter, startDate ? startDate : null, endDate ? endDate : null);
-      console.log(dateFilter)
 
       const filterQuery = { ...filterCondition, ...(dateFilter ? { ...dateFilter } : {}) };
 
@@ -263,7 +262,7 @@ const getOrderhistories = async (req,res) => {
       
       const updatedOrderHistories = orderhistories.map((order) => {
          order.items = order.items.map((item) => {
-           const imageUrls = item.productId.gallery.map((image) => `${req.protocol}://${req.get("host")}/uploads/products/${image}`);
+           const imageUrls = item.productId.gallery.map((image) => `https://${req.get("host")}/uploads/products/${image}`);
            return {
              ...item.toObject(),
              productId: {
