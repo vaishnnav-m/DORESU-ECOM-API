@@ -120,7 +120,8 @@ const logoutAdmin = async (req, res) => {
 
     res.clearCookie("adminJwt", {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
     });
     res.json({ message: "cookie is cleared" });
   } catch (error) {
